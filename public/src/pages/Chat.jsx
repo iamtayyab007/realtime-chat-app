@@ -6,15 +6,19 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { allUsersRoute } from "../utils/ApiRoutes";
 import Contact from "../components/Contact";
+import { Welcome } from "../components/Welcome";
+import ChatContainer from "../components/ChatContainer";
 
 function Chat() {
   const [contacts, setContacts] = useState([]);
   const [currentUser, setCurrentUser] = useState(undefined);
+  const [currentChat, setCurrentChat] = useState(undefined);
+
   const navigate = useNavigate();
-  console.log(contacts);
+
   useEffect(() => {
-    if (localStorage.getItem("chat-app-user")) {
-      navigate("/");
+    if (!localStorage.getItem("chat-app-user")) {
+      navigate("/login");
     } else {
       setCurrentUser(JSON.parse(localStorage.getItem("chat-app-user")));
     }
@@ -23,8 +27,13 @@ function Chat() {
     const checkCurrentUser = async () => {
       if (currentUser) {
         if (currentUser.isAvatarImageSet) {
-          const data = await axios.get(`${allUsersRoute}/${currentUser.id}`);
-          setContacts(data.data);
+          try {
+            const data = await axios.get(`${allUsersRoute}/${currentUser._id}`);
+
+            setContacts(data.data.users);
+          } catch (error) {
+            console.log(error);
+          }
         } else {
           navigate("/setAvatar");
         }
@@ -32,11 +41,27 @@ function Chat() {
     };
     checkCurrentUser();
   }, [currentUser]);
+  const handleChatChange = (chat) => {
+    setCurrentChat(chat);
+  };
+
   return (
     <>
       <Container>
         <div className="container">
-          <Contact contacts={contacts} currentUser={currentUser} />
+          <Contact
+            contacts={contacts}
+            currentUser={currentUser}
+            changeChat={handleChatChange}
+          />
+          {currentChat === undefined ? (
+            <Welcome currentUser={currentUser} />
+          ) : (
+            <ChatContainer
+              currentChat={currentChat}
+              currentUser={currentUser}
+            />
+          )}
         </div>
       </Container>
     </>

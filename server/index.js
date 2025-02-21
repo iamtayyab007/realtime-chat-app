@@ -3,6 +3,8 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import userRoute from "./Routes/userRoutes.js";
+import messageRoute from "./Routes/messageRoute.js";
+import { Socket } from "socket.io";
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +26,7 @@ app.use(
 
 // defining router middleware
 app.use("/api/auth", userRoute);
+app.use("/api/messages", messageRoute);
 
 // Connecting to mongoDB
 mongoose
@@ -41,4 +44,25 @@ mongoose
 // defining the PORT
 const server = app.listen(process.env.PORT, () => {
   console.log(`server is running on ${process.env.PORT}`);
+});
+
+//code for implementing socket
+const io = Socket(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true,
+  },
+});
+global.onlineUsers = new Map();
+io.on("connection", (socket) => {
+  global.chatSocket = socket;
+  socket.on("add-user", (userId) => {
+    onlineUsers.set(userId, socket.id);
+  });
+  socket.on("send-msg", (data) => {
+    const sendUserSocket = onlineUsers.get(data.to);
+    if (sendUserSocket) {
+      socket.to(sendUserSocket).emit("msg-receive", data.message);
+    }
+  });
 });
