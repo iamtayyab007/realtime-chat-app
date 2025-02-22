@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import userRoute from "./Routes/userRoutes.js";
 import messageRoute from "./Routes/messageRoute.js";
-import { Socket } from "socket.io";
+import { Server } from "socket.io";
 
 // Load environment variables
 dotenv.config();
@@ -47,7 +47,7 @@ const server = app.listen(process.env.PORT, () => {
 });
 
 //code for implementing socket
-const io = Socket(server, {
+const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
     credentials: true,

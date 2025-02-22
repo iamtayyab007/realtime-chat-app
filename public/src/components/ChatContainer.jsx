@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import Logout from "./Logout";
 import Messages from "./Messages";
 import ChatInput from "./ChatInput";
+import { v4 as uuidv4 } from "uuid";
 import { sendMessageRoute, getAllMessagesRoute } from "../utils/ApiRoutes.js";
-export default function ChatContainer({ currentChat, currentUser }) {
+export default function ChatContainer({ currentChat, currentUser, socket }) {
   const [messages, setMessages] = useState([]);
+  const [arrivalMessage, setArrivalMessage] = useState(null);
+  const scrollRef = useRef();
   useEffect(() => {
     async function getMessages() {
       const response = await axios.post(getAllMessagesRoute, {
@@ -23,7 +26,32 @@ export default function ChatContainer({ currentChat, currentUser }) {
       to: currentChat._id,
       message: msg,
     });
+
+    socket.current.emit("send-msg", {
+      from: currentUser._id,
+      to: currentChat._id,
+      message: msg,
+    });
+    const msgs = [...messages];
+    msgs.push({ fromSelf: true, message: msg });
+    setMessages(msgs);
   };
+
+  useEffect(() => {
+    if (socket.current) {
+      socket.current.on("msg-receive", (msg) => {
+        setArrivalMessage({ fromSelf: false, message: msg });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
+  }, [arrivalMessage]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behaviour: "smooth" });
+  }, [messages]);
   return (
     <Container>
       <div className="chat-header">
@@ -42,7 +70,7 @@ export default function ChatContainer({ currentChat, currentUser }) {
         <div className="chat-messages">
           {messages.map((message) => {
             return (
-              <div>
+              <div ref={scrollRef} key={uuidv4()}>
                 <div
                   className={`message ${
                     message.fromSelf ? "sended" : "received"
